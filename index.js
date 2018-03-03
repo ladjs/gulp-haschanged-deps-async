@@ -14,43 +14,36 @@ module.exports = function(opts = {}) {
     opts
   );
 
-  return function(stream, sourceFile, destPath) {
+  return async function(stream, sourceFile, destPath) {
     debug('sourceFile.path', sourceFile.path, 'destPath', destPath);
-    return new Promise(async resolve => {
-      try {
-        const deps = await recurse(sourceFile.path, opts.precinct);
-        debug('deps', deps);
+    try {
+      const deps = await recurse(sourceFile.path, opts.precinct);
+      debug('deps', deps);
 
-        const sourceMTime = await getLatestMTimeFromDeps(deps);
-        debug('sourceMTime', sourceMTime);
+      const sourceMTime = await getLatestMTimeFromDeps(deps);
+      debug('sourceMTime', sourceMTime);
 
-        debug(
-          'Got deps for `' + sourceFile.path + '`',
-          deps,
-          'Latest mtime',
-          sourceMTime
-        );
+      debug(
+        'Got deps for `' + sourceFile.path + '`',
+        deps,
+        'Latest mtime',
+        sourceMTime
+      );
 
-        const targetStat = await fs.stat(destPath);
+      const targetStat = await fs.stat(destPath);
 
-        debug('Target', destPath, 'mtime', targetStat && targetStat.mtime);
+      debug('Target', destPath, 'mtime', targetStat && targetStat.mtime);
 
-        if (!targetStat || sourceMTime >= targetStat.mtime)
-          stream.push(sourceFile);
-      } catch (err) {
-        debug('Target', destPath, 'err', err);
-        if (!opts.allowMissingDeps) {
-          const obj = { fileName: sourceFile.path };
-          if (err.parent) obj.parent = err.parent;
-          stream.emit(
-            'error',
-            new PluginError('gulp-haschanged-deps', err, obj)
-          );
-        }
-      } finally {
-        resolve();
+      if (!targetStat || sourceMTime >= targetStat.mtime)
+        stream.push(sourceFile);
+    } catch (err) {
+      debug('Target', destPath, 'err', err);
+      if (!opts.allowMissingDeps) {
+        const obj = { fileName: sourceFile.path };
+        if (err.parent) obj.parent = err.parent;
+        stream.emit('error', new PluginError('gulp-haschanged-deps', err, obj));
       }
-    });
+    }
   };
 };
 
@@ -125,17 +118,9 @@ function recurse(entryPoint, precinctOpts, _path, allDeps = [], parent) {
   });
 }
 
-function getLatestMTimeFromDeps(deps) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const stats = await Promise.all(deps.map(d => fs.stat(d)));
-      resolve(
-        stats.map(stat => stat.mtime).reduce((cur, mtime) => {
-          return mtime > cur ? mtime : cur;
-        }, 0)
-      );
-    } catch (err) {
-      reject(err);
-    }
-  });
+async function getLatestMTimeFromDeps(deps) {
+  const stats = await Promise.all(deps.map(d => fs.stat(d)));
+  stats.map(stat => stat.mtime).reduce((cur, mtime) => {
+    return mtime > cur ? mtime : cur;
+  }, 0);
 }
