@@ -1,0 +1,128 @@
+{
+  "name": "gulp-haschanged-deps-async",
+  "description": "Provides a hasChanged function for use with gulp-changed to check mtimes of a file's dependencies",
+  "version": "0.0.1",
+  "author": "Matt Powell",
+  "bugs": {
+    "url": "https://github.com/niftylettuce/gulp-haschanged-deps-async/issues",
+    "email": "niftylettuce@gmail.com"
+  },
+  "contributors": [
+    "Nick Baugh <niftylettuce@gmail.com> (http://niftylettuce.com/)"
+  ],
+  "dependencies": {
+    "debug": "^3.1.0",
+    "fs-extra": "^5.0.0",
+    "plugin-error": "^1.0.1",
+    "precinct": "^4.0.0",
+    "resolve": "^1.5.0"
+  },
+  "devDependencies": {
+    "eslint": "^4.5.0",
+    "eslint-config-prettier": "^2.9.0",
+    "eslint-plugin-prettier": "^2.6.0",
+    "husky": "^0.14.3",
+    "lint-staged": "^4.0.4",
+    "prettier": "^1.6.1",
+    "remark-cli": "^4.0.0",
+    "remark-preset-github": "^0.0.6",
+    "xo": "^0.20.3"
+  },
+  "engines": {
+    "node": ">=8.3"
+  },
+  "homepage": "https://github.com/niftylettuce/gulp-haschanged-deps-async",
+  "keywords": [
+    "gulp",
+    "haschanged",
+    "changed",
+    "dependencies",
+    "rev",
+    "revisions",
+    "mtime",
+    "modified",
+    "time",
+    "stamp",
+    "date",
+    "compare",
+    "comparison",
+    "plugin",
+    "build",
+    "grunt",
+    "less",
+    "sass",
+    "js",
+    "common",
+    "require",
+    "import",
+    "es6",
+    "es7",
+    "export",
+    "imports",
+    "exported",
+    "module",
+    "modules",
+    "package",
+    "packages"
+  ],
+  "license": "MIT",
+  "lint-staged": {
+    "*.{js,jsx,mjs,ts,tsx,css,less,scss,json,graphql}": [
+      "prettier --write --single-quote --trailing-comma none",
+      "git add"
+    ],
+    "*.md": [
+      "remark . -qfo",
+      "git add"
+    ]
+  },
+  "main": "index.js",
+  "remarkConfig": {
+    "plugins": [
+      "preset-github"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/niftylettuce/gulp-haschanged-deps-async"
+  },
+  "xo": {
+    "extends": "prettier",
+    "plugins": [
+      "prettier"
+    ],
+    "parserOptions": {
+      "sourceType": "script"
+    },
+    "rules": {
+      "prettier/prettier": [
+        "error",
+        {
+          "singleQuote": true,
+          "bracketSpacing": true,
+          "trailingComma": "none"
+        }
+      ],
+      "max-params": [
+        "error",
+        5
+      ],
+      "max-len": [
+        "error",
+        {
+          "code": 80,
+          "ignoreUrls": true
+        }
+      ],
+      "capitalized-comments": "off",
+      "camelcase": "off",
+      "no-warning-comments": "off"
+    },
+    "space": true
+  },
+  "scripts": {
+    "lint": "xo && remark . -qfo",
+    "precommit": "lint-staged && npm test",
+    "test": "npm run lint"
+  }
+}
