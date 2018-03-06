@@ -1,6 +1,7 @@
 {
   "name": "gulp-haschanged-deps-async",
-  "description": "Provides a hasChanged function for use with gulp-changed to check mtimes of a file's dependencies",
+  "description":
+    "Provides a hasChanged function for use with gulp-changed to check mtimes of a file's dependencies",
   "version": "0.0.1",
   "author": "Matt Powell",
   "bugs": {
@@ -11,10 +12,10 @@
     "Nick Baugh <niftylettuce@gmail.com> (http://niftylettuce.com/)"
   ],
   "dependencies": {
-    "debug": "^3.1.0",
     "fs-extra": "^5.0.0",
     "plugin-error": "^1.0.1",
     "precinct": "^4.0.0",
+    "replace-ext": "^1.0.0",
     "resolve": "^1.5.0"
   },
   "devDependencies": {
@@ -71,16 +72,11 @@
       "prettier --write --single-quote --trailing-comma none",
       "git add"
     ],
-    "*.md": [
-      "remark . -qfo",
-      "git add"
-    ]
+    "*.md": ["remark . -qfo", "git add"]
   },
   "main": "index.js",
   "remarkConfig": {
-    "plugins": [
-      "preset-github"
-    ]
+    "plugins": ["preset-github"]
   },
   "repository": {
     "type": "git",
@@ -88,9 +84,7 @@
   },
   "xo": {
     "extends": "prettier",
-    "plugins": [
-      "prettier"
-    ],
+    "plugins": ["prettier"],
     "parserOptions": {
       "sourceType": "script"
     },
@@ -103,10 +97,7 @@
           "trailingComma": "none"
         }
       ],
-      "max-params": [
-        "error",
-        5
-      ],
+      "max-params": ["error", 5],
       "max-len": [
         "error",
         {

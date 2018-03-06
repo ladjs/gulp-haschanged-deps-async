@@ -1,49 +1,50 @@
 const path = require('path');
 const fs = require('fs-extra');
+const replaceExt = require('replace-ext');
 const nodeResolve = require('resolve');
 const precinct = require('precinct');
-const debug = require('debug')('gulp-haschanged-deps');
 const PluginError = require('plugin-error');
 
-module.exports = function(opts = {}) {
+module.exports = function(destPath, opts = {}) {
   opts = Object.assign(
     {
-      allowMissingDeps: true,
-      precinct: {}
+      cwd: process.cwd(),
+      precinct: {},
+      extension: ''
     },
     opts
   );
 
-  return async function(stream, sourceFile, destPath) {
-    debug('sourceFile.path', sourceFile.path, 'destPath', destPath);
-    try {
-      const deps = await recurse(sourceFile.path, opts.precinct);
-      debug('deps', deps);
+  if (!destPath)
+    throw new PluginError(
+      'gulp-haschanged-deps-async',
+      'Destination path `dest` required'
+    );
 
-      const sourceMTime = await getLatestMTimeFromDeps(deps);
-      debug('sourceMTime', sourceMTime);
-
-      debug(
-        'Got deps for `' + sourceFile.path + '`',
-        deps,
-        'Latest mtime',
-        sourceMTime
-      );
-
-      const targetStat = await fs.stat(destPath);
-
-      debug('Target', destPath, 'mtime', targetStat && targetStat.mtime);
-
-      if (!targetStat || sourceMTime >= targetStat.mtime)
-        stream.push(sourceFile);
-    } catch (err) {
-      debug('Target', destPath, 'err', err);
-      if (!opts.allowMissingDeps) {
-        const obj = { fileName: sourceFile.path };
-        if (err.parent) obj.parent = err.parent;
-        stream.emit('error', new PluginError('gulp-haschanged-deps', err, obj));
+  return file => {
+    return new Promise(async (resolve, reject) => {
+      try {
+        // TODO: this doesn't throw the error
+        // the reject gets suppressed in gulp-filter
+        // throw new PluginError('gulp-haschanged-deps-async', 'ugh');
+        const deps = await recurse(file.path, opts);
+        const sourceMTime = await getLatestMTimeFromDeps(deps);
+        let fileDestPath = path.resolve(opts.cwd, destPath, file.relative);
+        if (opts.extension)
+          fileDestPath = replaceExt(fileDestPath, opts.extension);
+        try {
+          const targetStat = await fs.stat(fileDestPath);
+          resolve(sourceMTime >= targetStat.mtime);
+        } catch (err) {
+          if (err.code === 'ENOENT') return resolve(true);
+          throw err;
+        }
+      } catch (err) {
+        // TODO: we're temporarily outputting this
+        console.log('gulp-haschanged-deps-async error', err);
+        reject(err);
       }
-    }
+    });
   };
 };
 
@@ -51,76 +52,52 @@ function toDeps(contents, path, precinctOpts) {
   return precinct(contents, precinctOpts);
 }
 
-function toResolvedPath(basePath, _path) {
+function toResolvedPath(basePath, _path, opts) {
   return new Promise((resolve, reject) => {
-    nodeResolve(path.resolve(basePath, _path), (err, res) => {
-      // TODO: do we want to throw error?
+    const p = _path ? path.resolve(basePath, _path) : basePath;
+    nodeResolve(p, { basedir: opts.cwd }, (err, res) => {
       if (err) return reject(err);
       resolve(res);
     });
   });
 }
 
-function recurse(entryPoint, precinctOpts, _path, allDeps = [], parent) {
-  debug('entryPoint', entryPoint, '_path', _path);
+async function recurse(entryPoint, opts, _path, allDeps = [], parent) {
   if (!_path) _path = entryPoint;
   allDeps.push(_path);
-  debug(
-    'recurse',
-    'entryPoint',
-    entryPoint,
-    'precinctOpts',
-    precinctOpts,
-    '_path',
-    path,
-    'allDeps',
-    allDeps,
-    'parent',
-    parent
-  );
-  return new Promise(async (resolve, reject) => {
-    try {
-      const contents = await fs.readFile(_path, 'utf8');
+  try {
+    const contents = await fs.readFile(_path, 'utf8');
 
-      const basePath = path.dirname(_path);
+    const basePath = path.dirname(_path);
 
-      const deps = await Promise.all(
-        toDeps(contents, _path, precinctOpts).map(p => {
-          return new Promise(async (resolve, reject) => {
-            try {
-              const resolvedPath = await toResolvedPath(basePath, p);
-              // TODO: don't throw error?
-              // only emit warning if it's a relative path
-              if (!resolvedPath && p[0] === '.')
-                throw new Error(
-                  `Unable to resolve referenced path ${p} (from "${_path}")`
-                );
-              resolve(resolvedPath);
-            } catch (err) {
-              reject(err);
-            }
-          });
-        })
-      );
+    const deps = await Promise.all(
+      toDeps(contents, _path, opts.precinct).map(async p => {
+        let resolvedPath;
+        if (p[0] === '.') {
+          resolvedPath = await toResolvedPath(basePath, p, opts);
+        } else {
+          resolvedPath = await toResolvedPath(p, null, opts);
+        }
+        return resolvedPath;
+      })
+    );
 
-      await Promise.all(
-        deps.filter(d => !d || allDeps.indexOf(d) !== -1).map(d => {
-          return recurse(entryPoint, precinctOpts, d, allDeps, _path);
-        })
-      );
+    await Promise.all(
+      deps.filter(d => !d || allDeps.indexOf(d) !== -1).map(d => {
+        return recurse(entryPoint, opts, d, allDeps, _path);
+      })
+    );
 
-      resolve(allDeps);
-    } catch (err) {
-      // TODO: resolve(allDeps);
-      err.parent = parent || entryPoint;
-      reject(err);
-    }
-  });
+    return allDeps;
+  } catch (err) {
+    err.parent = parent || entryPoint;
+    throw err;
+  }
 }
 
 async function getLatestMTimeFromDeps(deps) {
   const stats = await Promise.all(deps.map(d => fs.stat(d)));
-  stats.map(stat => stat.mtime).reduce((cur, mtime) => {
+  return stats.map(stat => stat.mtime).reduce((cur, mtime) => {
     return mtime > cur ? mtime : cur;
   }, 0);
 }

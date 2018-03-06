@@ -38,25 +38,28 @@ yarn add gulp-haschanged-deps-async
 ## Usage
 
 ```js
-const hasChangedDepsAsync = require('gulp-haschanged-deps-async');
 const gulp = require('gulp');
-const changed = require('gulp-changed');
+const filter = require('gulp-custom-filter');
+const hasChangedDepsAsync = require('gulp-haschanged-deps-async');
+const less = require('gulp-less');
 
-const SRC = 'src/*.js';
-const DEST = 'dist';
-
-gulp.task('default', () =>
-  gulp.src(SRC)
-    .pipe(changed(DEST, {
-      hasChanged: hasChangedDepsAsync({
-        allowMissingDeps: false
-      }
-    }))
-    // `ngAnnotate` will only get the files that
-    // changed since the last time it was run
-    .pipe(ngAnnotate())
-    .pipe(gulp.dest(DEST))
-);
+gulp.task('less', () => {
+  return (
+    gulp
+      .src(['less/**/*.less'])
+      .pipe(
+        filter(
+          hasChangedDepsAsync('css', {
+            extension: '.css'
+          })
+        )
+      )
+      .pipe(sourcemaps.init())
+      .pipe(less())
+      .pipe(sourcemaps.write('.'))
+      .pipe(gulp.dest('css'))
+  );
+});
 ```
 
 
@@ -72,7 +75,7 @@ gulp.task('default', () =>
 [MIT](LICENSE) © Matt Powell
 
 
-##
+## 
 
 [npm]: https://www.npmjs.com/
 
