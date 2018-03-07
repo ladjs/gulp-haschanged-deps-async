@@ -54,9 +54,34 @@ function toDeps(contents, path, precinctOpts) {
 
 function toResolvedPath(basePath, _path, opts) {
   return new Promise((resolve, reject) => {
-    const p = _path ? path.resolve(basePath, _path) : basePath;
-    nodeResolve(p, { basedir: opts.cwd }, (err, res) => {
-      if (err) return reject(err);
+    const config = { basedir: opts.cwd };
+    let id;
+    // if it's a sass, less, or stylus file then don't use require's
+    if (
+      opts.precinct.type &&
+      ['sass', 'less', 'stylus'].includes(opts.precinct.type)
+    ) {
+      if (opts.precinct.type === 'sass') config.extensions = ['.scss', '.sass'];
+      else if (opts.precinct.type === 'stylus') config.extensions = ['.styl'];
+      else config.extensions = ['.less'];
+      id = path.resolve(basePath, _path);
+    } else if (_path[0] === '.') {
+      // if the path starts with `./` then use the full path to the file
+      id = path.resolve(basePath, _path);
+    } else {
+      // otherwise just use the package name to be resolved with
+      id = _path;
+    }
+    nodeResolve(id, config, (err, res) => {
+      if (err) {
+        // attempt to find a local version of the file
+        // (e.g. less/sass/stylus all can do "@import _some-file.less")
+        // and it should import locally
+        // if (err.code === 'MODULE_NOT_FOUND') {
+        //   return;
+        // }
+        return reject(err);
+      }
       resolve(res);
     });
   });
@@ -72,20 +97,22 @@ async function recurse(entryPoint, opts, _path, allDeps = [], parent) {
 
     const deps = await Promise.all(
       toDeps(contents, _path, opts.precinct).map(async p => {
-        let resolvedPath;
-        if (p[0] === '.') {
-          resolvedPath = await toResolvedPath(basePath, p, opts);
-        } else {
-          resolvedPath = await toResolvedPath(p, null, opts);
-        }
+        const resolvedPath = await toResolvedPath(basePath, p, opts);
+        // exclude core modules from attempting to be looked up
+        if (
+          (!opts.precinct.type ||
+            !['sass', 'less', 'stylus'].includes(opts.precinct.type)) &&
+          nodeResolve.isCore(resolvedPath)
+        )
+          return false;
         return resolvedPath;
       })
     );
 
     await Promise.all(
-      deps.filter(d => !d || allDeps.indexOf(d) !== -1).map(d => {
-        return recurse(entryPoint, opts, d, allDeps, _path);
-      })
+      deps
+        .filter(d => d && allDeps.indexOf(d) === -1)
+        .map(d => recurse(entryPoint, opts, d, allDeps, _path))
     );
 
     return allDeps;
