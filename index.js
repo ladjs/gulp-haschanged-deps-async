@@ -22,7 +22,7 @@ module.exports = function(destPath, opts = {}) {
     );
 
   return file => {
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async resolve => {
       try {
         // TODO: this doesn't throw the error
         // the reject gets suppressed in gulp-filter
@@ -41,8 +41,14 @@ module.exports = function(destPath, opts = {}) {
         }
       } catch (err) {
         // TODO: we're temporarily outputting this
-        console.log('gulp-haschanged-deps-async error', err);
-        reject(err);
+        console.log(
+          `gulp-haschanged-deps-async error, not recompiling "${
+            file.path
+          }" due to this error:`
+        );
+        console.error(err);
+        // reject(err);
+        resolve(false);
       }
     });
   };
