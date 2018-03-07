@@ -50,7 +50,17 @@ gulp.task('less', () => {
       .pipe(
         filter(
           hasChangedDepsAsync('css', {
-            extension: '.css'
+            // the cwd option is for resolving paths to packages
+            // and it defaults to the directory process is running from
+            cwd: process.cwd(),
+            // an optional extension you can pass if the file extension changes
+            extension: '.css',
+            // this is optional option, but useful for specifying directly
+            // so that no auto-detection is required by `precinct`
+            // <https://github.com/dependents/node-precinct>
+            precinct: {
+              type: 'less'
+            }
           })
         )
       )
