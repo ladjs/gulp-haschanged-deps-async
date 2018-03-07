@@ -2,7 +2,7 @@
   "name": "gulp-haschanged-deps-async",
   "description":
     "Provides a hasChanged function for use with gulp-changed to check mtimes of a file's dependencies",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "author": "Matt Powell",
   "bugs": {
     "url": "https://github.com/niftylettuce/gulp-haschanged-deps-async/issues",
